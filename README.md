@@ -26,6 +26,8 @@ The GLKVM web UI is great, but it always uses your system's **default** speaker 
 | 📊 | **Data totals** | Shows total downloaded / uploaded for the session, read from WebRTC `getStats()`, next to the bitrate. |
 | 🧹 | **Auto-collapse toolbar** | Collapses the top toolbar on load and centers the expand handle. |
 | 🔈 | **Speaker / mic on by default** | Optionally enable the remote speaker and/or microphone automatically when the page loads. |
+| ⌨️ | **Capture keyboard shortcuts** | Uses the Keyboard Lock API in fullscreen to forward Cmd+R/W/T and other shortcuts to the remote instead of the local browser. |
+| 🖥️ | **Status bar in fullscreen** | Keeps the bottom bar (speaker, mic, stats) and toolbar visible in fullscreen by intercepting GLKVM's fullscreen button and suppressing its `fullscreenchange` handler. |
 | ⚙️ | **Options page** | Toggle each behavior on/off; preferences sync across your Chrome profile. |
 
 The device pickers appear as small chevrons next to the existing speaker/mic icons in the bottom status bar, plus a Picture-in-Picture button:
@@ -68,10 +70,17 @@ Then reload the extension.
 
 <p align="center"><img src="assets/popup.png" width="320" alt="Settings popup" /></p>
 
+**Display**
 - **Collapse toolbar by default**
 - **Show network consumption**
+- **Show status bar in fullscreen** — keeps the bottom bar and toolbar visible while in fullscreen
+
+**Audio**
 - **Enable speaker by default**
 - **Enable microphone by default** (off by default — turning this on prompts for mic access and starts capturing on every load)
+
+**Keyboard**
+- **Capture keyboard shortcuts** — in fullscreen, sends Cmd+R/W/T and similar shortcuts to the remote instead of the local browser (uses the Keyboard Lock API; Cmd+Q and Cmd+Tab remain OS-reserved)
 
 Settings are stored in `chrome.storage.sync` and apply on the next page load; the network-stats toggle applies live. The popup talks to `chrome.storage`, while the main script runs in the page's MAIN world (no `chrome.*` access) — a small isolated-world bridge mirrors the settings between them.
 

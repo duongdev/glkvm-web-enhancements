@@ -14,7 +14,7 @@
 
   // Feature toggles come from the options page via chrome.storage, mirrored by the
   // isolated-world bridge into this attribute (MAIN world can't read chrome.storage).
-  const CFG_DEFAULTS = { collapseToolbar: true, showStats: true, enableSpeaker: true, enableMic: false };
+  const CFG_DEFAULTS = { collapseToolbar: true, showStats: true, enableSpeaker: true, enableMic: false, lockKeyboard: true, showBarFullscreen: true };
   function cfg() {
     try { return Object.assign({}, CFG_DEFAULTS, JSON.parse(document.documentElement.getAttribute("data-glkvm-cfg") || "{}")); }
     catch (_) { return CFG_DEFAULTS; }
@@ -295,8 +295,8 @@
   // hugs the icon as tightly as the mic's (whose row has no gap).
   function normGap(chev) {
     if (!chev) return;
-    const pcs = getComputedStyle(chev.parentElement);
-    const gap = parseFloat(pcs.columnGap) || parseFloat(pcs.gap) || 0;
+    const cs = getComputedStyle(chev.parentElement);
+    const gap = parseFloat(cs.columnGap) || parseFloat(cs.gap) || 0;
     chev.style.marginLeft = (gap ? -(gap - 1) : 1) + "px";
   }
   function pipIcon() {
@@ -395,6 +395,61 @@
     }, 800);
   }
 
+  // --- 12. Keyboard lock: while GLKVM is fullscreen, route browser/OS shortcuts
+  //         (Cmd+R/W/T, F-keys, …) to the page so its keydown handler forwards them
+  //         to the remote instead of the local app acting on them. The Keyboard Lock
+  //         API only takes effect in fullscreen over a secure context — both hold here.
+  //         Cmd+Q and Cmd+Tab stay OS-reserved and can't be captured. ---
+  function applyKeyboardLock() {
+    const kb = navigator.keyboard;
+    if (!kb || typeof kb.lock !== "function") return;
+    if (document.fullscreenElement && cfg().lockKeyboard) {
+      const keys = cfg().lockKeys; // future: allowlist of KeyboardEvent.code; empty/absent = all keys
+      const locked = Array.isArray(keys) && keys.length ? kb.lock(keys) : kb.lock();
+      Promise.resolve(locked).catch(() => {});
+    } else {
+      try { kb.unlock(); } catch (_) {}
+    }
+  }
+  // --- 13. Keep the toolbar + status bar visible in fullscreen. GLKVM's fullscreen button
+  //         handler removes the chrome from the DOM the moment it runs (the bar is unmounted,
+  //         not just hidden) — separate from the fullscreenchange event. Calling
+  //         requestFullscreen ourselves never triggers that, so when the option is on we
+  //         intercept the button click in the capture phase, block GLKVM's handler, and do
+  //         the fullscreen toggle here. Exit works the same way since the bar (and its
+  //         button) stay on screen. ---
+  // GLKVM unmounts the chrome through two paths: the button's own click handler (the
+  // header) and a fullscreenchange handler (the bottom bar). We block both — hijack the
+  // button click to toggle fullscreen ourselves, and swallow fullscreenchange in the
+  // capture phase. Both fire before GLKVM's bubble-phase handlers, so the chrome survives.
+  const fsHref = (u) => u.getAttribute("xlink:href") || u.getAttribute("href") || "";
+  // Walk up the contiguous pointer-cursor chain from the click target to the button
+  // element (the .action-item), then confirm it holds the fullscreen icon.
+  function isFullscreenButtonClick(e) {
+    let el = e.target, btn = null;
+    while (el && el.nodeType === 1 && el !== document.body && getComputedStyle(el).cursor === "pointer") {
+      btn = el;
+      el = el.parentElement;
+    }
+    return !!btn && [...btn.querySelectorAll("use")].some((u) => /fullscreen/i.test(fsHref(u)));
+  }
+  let fsBound = false;
+  function setupFullscreen() {
+    if (fsBound) return;
+    fsBound = true;
+    document.addEventListener("fullscreenchange", (e) => {
+      applyKeyboardLock();
+      if (cfg().showBarFullscreen) e.stopImmediatePropagation();
+    }, true);
+    document.addEventListener("click", (e) => {
+      if (!cfg().showBarFullscreen || !isFullscreenButtonClick(e)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      else document.documentElement.requestFullscreen().catch(() => {});
+    }, true);
+  }
+
   // The status bar is Vue-rendered; re-inject if it re-mounts and our nodes vanish.
   let scheduled = false;
   function schedule() {
@@ -408,6 +463,7 @@
     autoSpeaker();
     autoMic();
     startNet();
+    setupFullscreen();
     tryInject();
     const obs = new MutationObserver(() => {
       if (!document.querySelector("#kvm-ext-spk-chev, #kvm-ext-mic-chev, #kvm-ext-pip")) schedule();

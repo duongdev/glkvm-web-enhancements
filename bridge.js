@@ -2,7 +2,7 @@
 // that the MAIN-world content script can read (MAIN world has no chrome.* access).
 (function () {
   "use strict";
-  const DEFAULTS = { collapseToolbar: true, showStats: true, enableSpeaker: true, enableMic: false };
+  const DEFAULTS = { collapseToolbar: true, showStats: true, enableSpeaker: true, enableMic: false, lockKeyboard: true, showBarFullscreen: true };
 
   function write(cfg) {
     try {

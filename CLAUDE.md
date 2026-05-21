@@ -13,6 +13,7 @@ Vanilla JS/HTML/CSS, no bundler, no dependencies, no tests. Iterate by editing f
 - **Load/reload:** `chrome://extensions` → Developer mode → Load unpacked → select repo root. After edits, hit **Reload** on the extension card, then refresh the GLKVM tab.
 - **Syntax check before reload:** `node --check content.js && node --check bridge.js && node --check popup.js` and `python3 -c "import json;json.load(open('manifest.json'))"`.
 - **Regenerate icons** from the source SVG: `for s in 16 32 48 128; do rsvg-convert -w $s -h $s icons/icon.svg -o icons/icon-$s.png; done` (requires `rsvg-convert`, e.g. `brew install librsvg`).
+- **Regenerate the popup screenshot** (`assets/popup.png`, used in the README) whenever `popup.html` changes: launch Chrome with `--remote-debugging-port=9222`, open `file://<repo>/popup.html`, then over CDP set every `input[type=checkbox]` to `checked` (file:// has no `chrome.storage`, so toggles render off otherwise) and `Page.captureScreenshot` clipped to `document.body`'s height at `deviceScaleFactor: 2`.
 
 ## Architecture: the two-world split
 
@@ -31,6 +32,8 @@ Settings flow: **popup → `chrome.storage.sync` → `bridge.js` → `data-glkvm
 - **The UI is re-injected via `MutationObserver`.** The status bar is Vue-rendered and re-mounts; `tryInject()` re-adds the chevrons/PiP/stats when they vanish.
 - **Two separate stores.** Device selections (speaker/mic IDs) live in the page's `localStorage` (origin-specific). Feature toggles live in `chrome.storage.sync`. Don't merge them.
 - **Settings defaults are duplicated** in `content.js` (`CFG_DEFAULTS`), `bridge.js` (`DEFAULTS`), and `popup.js` (`DEFAULTS`). Keep all three in sync when adding a toggle.
+- **`setupFullscreen()` intercepts GLKVM's own handlers in the capture phase.** For `showBarFullscreen`, two capture-phase listeners are registered: one swallows `fullscreenchange` before GLKVM's bubble-phase handler can unmount the chrome, and one intercepts fullscreen-button clicks and calls `requestFullscreen` / `exitFullscreen` directly. Adding any other fullscreen toggle logic must account for these listeners already being in place.
+- **Keyboard Lock API requires fullscreen + secure context.** `navigator.keyboard.lock()` is called on every `fullscreenchange` (both enter and exit paths) — it's a no-op until fullscreen is active. `Cmd+Q` and `Cmd+Tab` cannot be captured regardless of the lock list.
 
 ## Coupling to the GLKVM SPA (fragile by nature)
 
@@ -41,8 +44,18 @@ Settings flow: **popup → `chrome.storage.sync` → `bridge.js` → `data-glkvm
 - `.mic-status-icon` + `#gl-kvm-mic` / `#gl-kvm-mic-off` (mic toggle/state)
 - `.header-box` / `.header-collapsed` and `#gl-kvm-collapse`, `.un-collapse-triangle-collapsed` (toolbar collapse/expand)
 - `#stream-video` (the WebRTC `<video>`), `#stream-box` (PiP overlay mount)
+- Fullscreen button: detected heuristically by a `cursor:pointer` walk-up + icon symbol matching `/fullscreen/i` (no stable class selector — if the icon symbol changes, `isFullscreenButtonClick` breaks silently)
 
 Icons are flipped by sprite symbol (`<use xlink:href>`), so detect on/off state by the symbol name, and match controls by symbol *prefix* where the symbol changes with state.
+
+## Releasing
+
+The version lives in two places that must stay in sync: `manifest.json` `version` and the `.version` chip in `popup.html`. To cut a release:
+
+1. Bump `version` in `manifest.json` **and** the `v…` chip in `popup.html`.
+2. Regenerate `assets/popup.png` if the popup changed (see above).
+3. Run `/ship` (polish → docs-revise → one commit), then push.
+4. `gh release create vX.Y.Z --title vX.Y.Z --notes "<user-facing changes>"`.
 
 ## Host matching
 

@@ -1,4 +1,4 @@
-const DEFAULTS = { collapseToolbar: true, showStats: true, enableSpeaker: true, enableMic: false };
+const DEFAULTS = { collapseToolbar: true, showStats: true, enableSpeaker: true, enableMic: false, lockKeyboard: true, showBarFullscreen: true };
 const KEYS = Object.keys(DEFAULTS);
 const saved = document.getElementById("saved");
 let savedTimer = null;
