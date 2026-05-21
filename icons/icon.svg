@@ -1,0 +1,40 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3B9DFF"/>
+      <stop offset="0.55" stop-color="#1F6FEB"/>
+      <stop offset="1" stop-color="#14B8C4"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="26" y1="34" x2="102" y2="86" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E6F0FF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- App tile -->
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#bg)"/>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="white" fill-opacity="0.05"/>
+
+  <!-- Monitor screen -->
+  <rect x="26" y="33" width="76" height="52" rx="8" fill="url(#screen)"/>
+  <rect x="26" y="33" width="76" height="52" rx="8" stroke="#0E4FB0" stroke-opacity="0.15" stroke-width="1.5"/>
+
+  <!-- Stand -->
+  <rect x="57" y="85" width="14" height="9" fill="#DCE9FF"/>
+  <rect x="46" y="93" width="36" height="6" rx="3" fill="#EAF2FF"/>
+
+  <!-- Sound waves (left) -->
+  <g stroke="#1F6FEB" stroke-width="4.5" stroke-linecap="round" fill="none">
+    <path d="M37 53c3 3.5 3 14.5 0 18" opacity="0.55"/>
+    <path d="M44 48c5.5 6 5.5 22 0 28" opacity="0.8"/>
+  </g>
+  <!-- speaker body -->
+  <path d="M30 53h5l7-5v22l-7-5h-5z" fill="#1F6FEB"/>
+
+  <!-- PiP inset (bottom-right of screen) -->
+  <rect x="74" y="62" width="22" height="16" rx="3" fill="#14B8C4"/>
+  <rect x="74" y="62" width="22" height="16" rx="3" stroke="white" stroke-width="2"/>
+
+  <!-- Enhancement sparkle -->
+  <path d="M96 30c1.6 5.4 2.2 6 7.6 7.6-5.4 1.6-6 2.2-7.6 7.6-1.6-5.4-2.2-6-7.6-7.6 5.4-1.6 6-2.2 7.6-7.6z" fill="#FFFFFF"/>
+</svg>
