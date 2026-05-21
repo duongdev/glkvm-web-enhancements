@@ -22,10 +22,11 @@ The GLKVM web UI is great, but it always uses your system's **default** speaker 
 |---|---|---|
 | 🔊 | **Speaker picker** | Route KVM audio to any output device via `setSinkId`, re-applied whenever audio (re)starts. |
 | 🎤 | **Microphone picker** | Forces the chosen input by hooking `getUserMedia`; hot-swaps the live track if the mic is already streaming. |
-| 🖼️ | **Picture-in-Picture** | Pops the remote screen into a floating, always-on-top window. |
+| 🖼️ | **Picture-in-Picture** | Pops the remote screen into a floating, always-on-top window — with a "Bring video back" overlay so you can exit PiP from the otherwise-black page. |
 | 📊 | **Data totals** | Shows total downloaded / uploaded for the session, read from WebRTC `getStats()`, next to the bitrate. |
 | 🧹 | **Auto-collapse toolbar** | Collapses the top toolbar on load and centers the expand handle. |
-| 🔈 | **Speaker on by default** | Enables the KVM speaker automatically when the page loads. |
+| 🔈 | **Speaker / mic on by default** | Optionally enable the remote speaker and/or microphone automatically when the page loads. |
+| ⚙️ | **Options page** | Toggle each behavior on/off; preferences sync across your Chrome profile. |
 
 The device pickers appear as small chevrons next to the existing speaker/mic icons in the bottom status bar, plus a Picture-in-Picture button:
 
@@ -60,6 +61,19 @@ By default the script runs on `glkvm.local` and any Tailscale (`*.ts.net`) host.
 ```
 
 Then reload the extension.
+
+## Options
+
+**Click the toolbar icon** to open the settings popup. Each feature can be toggled independently:
+
+<p align="center"><img src="assets/popup.png" width="320" alt="Settings popup" /></p>
+
+- **Collapse toolbar by default**
+- **Show network consumption**
+- **Enable speaker by default**
+- **Enable microphone by default** (off by default — turning this on prompts for mic access and starts capturing on every load)
+
+Settings are stored in `chrome.storage.sync` and apply on the next page load; the network-stats toggle applies live. The popup talks to `chrome.storage`, while the main script runs in the page's MAIN world (no `chrome.*` access) — a small isolated-world bridge mirrors the settings between them.
 
 ## How it works
 

@@ -1,6 +1,7 @@
-// GLKVM Audio & PiP Controls — runs in the page's MAIN world at document_start.
+// GLKVM Web Enhancements — runs in the page's MAIN world at document_start.
 // Hooks media APIs before the SPA uses them, then adds device-picker chevrons
-// next to the existing speaker/mic icons in the bottom status bar, plus a PiP icon.
+// next to the speaker/mic icons, a PiP button, data totals, and toolbar tweaks.
+// Feature toggles are read from a DOM attribute mirrored by bridge.js.
 (function () {
   "use strict";
   if (window.__kvmMediaExt) return;
@@ -10,6 +11,17 @@
   const LS_SPK = "kvmExt.spkId";
   const get = (k) => { try { return localStorage.getItem(k) || ""; } catch (_) { return ""; } };
   const set = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
+
+  // Feature toggles come from the options page via chrome.storage, mirrored by the
+  // isolated-world bridge into this attribute (MAIN world can't read chrome.storage).
+  const CFG_DEFAULTS = { collapseToolbar: true, showStats: true, enableSpeaker: true, enableMic: false };
+  function cfg() {
+    try { return Object.assign({}, CFG_DEFAULTS, JSON.parse(document.documentElement.getAttribute("data-glkvm-cfg") || "{}")); }
+    catch (_) { return CFG_DEFAULTS; }
+  }
+  // True once the bridge has mirrored saved settings — load-time actions wait for this
+  // so a saved "off" preference isn't overridden by the defaults firing first.
+  function cfgReady() { return document.documentElement.hasAttribute("data-glkvm-cfg"); }
 
   // --- 1. Force the chosen microphone into every getUserMedia({audio}) the SPA makes ---
   const md = navigator.mediaDevices;
@@ -70,7 +82,7 @@
     if (spk && e.target && typeof e.target.setSinkId === "function") e.target.setSinkId(spk).catch(() => {});
   }, true);
 
-  // --- 4. Picture-in-Picture ---
+  // --- 4. Picture-in-Picture + a "bring video back" overlay while it's active ---
   async function togglePiP() {
     const v = document.getElementById("stream-video") || document.querySelector("video");
     if (!v) return;
@@ -79,6 +91,37 @@
       v.disablePictureInPicture = false;
       await v.requestPictureInPicture();
     } catch (e) { console.warn("[kvm-ext] PiP failed:", e.message); }
+  }
+  function pipOverlay(show) {
+    const box = document.getElementById("stream-box");
+    let ov = document.getElementById("kvm-ext-pip-overlay");
+    if (!show) { if (ov) ov.style.display = "none"; return; }
+    if (!box) return;
+    if (!ov) {
+      ov = document.createElement("div");
+      ov.id = "kvm-ext-pip-overlay";
+      ov.style.cssText =
+        "position:absolute;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#fff;font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:rgba(10,12,16,.72)";
+      ov.innerHTML =
+        '<svg viewBox="0 0 24 24" width="46" height="46" style="opacity:.9"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="12" y="11" width="8" height="6" rx="1" fill="currentColor"/></svg>' +
+        '<div style="font-size:15px;opacity:.85">Playing in Picture-in-Picture</div>' +
+        '<button id="kvm-ext-pip-back" style="padding:9px 18px;font-size:14px;font-weight:600;color:#fff;background:#1f6feb;border:none;border-radius:8px;cursor:pointer">Bring video back</button>';
+      box.appendChild(ov);
+      ov.querySelector("#kvm-ext-pip-back").addEventListener("click", async (e) => {
+        e.stopPropagation();
+        try { await document.exitPictureInPicture(); } catch (_) {}
+      });
+    } else if (ov.parentElement !== box) {
+      box.appendChild(ov);
+    }
+    ov.style.display = "flex";
+  }
+  function bindPiP() {
+    const v = document.getElementById("stream-video");
+    if (!v || v.dataset.kvmPip) return;
+    v.dataset.kvmPip = "1";
+    v.addEventListener("enterpictureinpicture", () => pipOverlay(true));
+    v.addEventListener("leavepictureinpicture", () => pipOverlay(false));
   }
 
   // --- 5. Device discovery (labels need a one-time permission grant) ---
@@ -207,6 +250,7 @@
     const bar = document.querySelector(".kvm-video-info");
     if (!bar) return null;
     let n = bar.querySelector("#kvm-ext-net");
+    if (!cfg().showStats) { if (n) n.remove(); return null; }
     if (!n) {
       const kbps = bar.querySelector(".frame-text");
       if (!kbps) return null;
@@ -292,6 +336,7 @@
       ref.insertAdjacentElement("afterend", pipIcon());
     }
     ensureNet();
+    bindPiP();
     // Re-apply stored speaker once devices/elements exist.
     const s = get(LS_SPK);
     if (s) applySpeaker(s);
@@ -310,7 +355,7 @@
   // --- 10. Collapse the toolbar by default (once), unless the app already restored it ---
   let collapseDone = false;
   function autoCollapse() {
-    if (collapseDone || !document.querySelector(".header-box")) return;
+    if (collapseDone || !cfgReady() || !cfg().collapseToolbar || !document.querySelector(".header-box")) return;
     collapseDone = true;
     setTimeout(() => {
       if (document.querySelector(".header-box.header-collapsed")) return;
@@ -324,10 +369,10 @@
     }, 600);
   }
 
-  // --- 11. Turn the speaker on by default (once), unless it's already on ---
+  // --- 11. Turn the speaker / mic on by default (once each), unless already on ---
   let speakerDone = false;
   function autoSpeaker() {
-    if (speakerDone) return;
+    if (speakerDone || !cfgReady() || !cfg().enableSpeaker) return;
     const icon = findSpeakerIcon(document);
     if (!icon) return;
     speakerDone = true;
@@ -335,6 +380,18 @@
       const u = icon.querySelector("use");
       const sym = u && (u.getAttribute("xlink:href") || u.getAttribute("href"));
       if (sym && /sound-off|mute/i.test(sym)) icon.click();
+    }, 800);
+  }
+  let micDone = false;
+  function autoMic() {
+    if (micDone || !cfgReady() || !cfg().enableMic) return;
+    const icon = document.querySelector(".mic-status-icon");
+    if (!icon) return;
+    micDone = true;
+    setTimeout(() => {
+      const u = icon.querySelector("use");
+      const sym = u && (u.getAttribute("xlink:href") || u.getAttribute("href"));
+      if (sym && /mic-off|mute/i.test(sym)) icon.click();
     }, 800);
   }
 
@@ -349,12 +406,14 @@
     injectCSS();
     autoCollapse();
     autoSpeaker();
+    autoMic();
     startNet();
     tryInject();
     const obs = new MutationObserver(() => {
       if (!document.querySelector("#kvm-ext-spk-chev, #kvm-ext-mic-chev, #kvm-ext-pip")) schedule();
       autoCollapse();
       autoSpeaker();
+      autoMic();
     });
     obs.observe(document.body || document.documentElement, { childList: true, subtree: true });
   }

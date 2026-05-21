@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GLKVM Web Enhancements</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; width: 320px; padding: 16px;
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #14151a; color: #e8eaed;
+    }
+    header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    header img { width: 30px; height: 30px; border-radius: 7px; }
+    h1 { font-size: 14px; margin: 0; font-weight: 600; }
+    .row {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 11px 12px; border: 1px solid #262932; border-radius: 10px;
+      background: #1b1d24; margin-bottom: 9px; cursor: pointer;
+    }
+    .row .text { flex: 1; }
+    .row .label { font-size: 13px; font-weight: 600; }
+    .row .desc { font-size: 11px; color: #8b93a1; margin-top: 2px; line-height: 1.4; }
+    .switch { position: relative; width: 38px; height: 22px; flex: 0 0 auto; margin-top: 1px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; cursor: pointer; background: #3a3f4b;
+      border-radius: 22px; transition: background .15s;
+    }
+    .slider::before {
+      content: ""; position: absolute; height: 16px; width: 16px; left: 3px; top: 3px;
+      background: #fff; border-radius: 50%; transition: transform .15s;
+    }
+    input:checked + .slider { background: #1f6feb; }
+    input:checked + .slider::before { transform: translateX(16px); }
+    footer { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+    .note { font-size: 10px; color: #6b7280; line-height: 1.45; flex: 1; }
+    .saved { color: #2ea043; opacity: 0; transition: opacity .2s; font-size: 11px; font-weight: 600; margin-left: 8px; }
+    .saved.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icons/icon-128.png" alt="" />
+    <h1>GLKVM Web Enhancements</h1>
+  </header>
+
+  <label class="row" for="collapseToolbar">
+    <div class="text">
+      <div class="label">Collapse toolbar by default</div>
+      <div class="desc">Hide the top toolbar on load for a larger viewport.</div>
+    </div>
+    <span class="switch"><input type="checkbox" id="collapseToolbar" /><span class="slider"></span></span>
+  </label>
+
+  <label class="row" for="showStats">
+    <div class="text">
+      <div class="label">Show network consumption</div>
+      <div class="desc">Show total downloaded / uploaded next to the bitrate.</div>
+    </div>
+    <span class="switch"><input type="checkbox" id="showStats" /><span class="slider"></span></span>
+  </label>
+
+  <label class="row" for="enableSpeaker">
+    <div class="text">
+      <div class="label">Enable speaker by default</div>
+      <div class="desc">Turn the remote audio output on when the page loads.</div>
+    </div>
+    <span class="switch"><input type="checkbox" id="enableSpeaker" /><span class="slider"></span></span>
+  </label>
+
+  <label class="row" for="enableMic">
+    <div class="text">
+      <div class="label">Enable microphone by default</div>
+      <div class="desc">Auto-enable mic on load — prompts for access and starts capturing.</div>
+    </div>
+    <span class="switch"><input type="checkbox" id="enableMic" /><span class="slider"></span></span>
+  </label>
+
+  <footer>
+    <span class="note">Applies on next page load (network stats applies live).</span>
+    <span class="saved" id="saved">Saved</span>
+  </footer>
+  <script src="popup.js"></script>
+</body>
+</html>
