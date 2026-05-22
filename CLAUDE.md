@@ -13,7 +13,7 @@ Vanilla JS/HTML/CSS, no bundler, no dependencies, no tests. Iterate by editing f
 - **Load/reload:** `chrome://extensions` → Developer mode → Load unpacked → select repo root. After edits, hit **Reload** on the extension card, then refresh the GLKVM tab.
 - **Syntax check before reload:** `node --check content.js && node --check bridge.js && node --check popup.js` and `python3 -c "import json;json.load(open('manifest.json'))"`.
 - **Regenerate icons** from the source SVG: `for s in 16 32 48 128; do rsvg-convert -w $s -h $s icons/icon.svg -o icons/icon-$s.png; done` (requires `rsvg-convert`, e.g. `brew install librsvg`).
-- **Regenerate the popup screenshot** (`assets/popup.png`, used in the README) whenever `popup.html` changes: launch Chrome with `--remote-debugging-port=9222`, open `file://<repo>/popup.html`, then over CDP set every `input[type=checkbox]` to `checked` (file:// has no `chrome.storage`, so toggles render off otherwise) and `Page.captureScreenshot` clipped to `document.body`'s height at `deviceScaleFactor: 2`.
+- **Regenerate the popup screenshot** (`assets/popup.png`, used in the README) whenever `popup.html` changes: `python3 scripts/capture-popup.py`. It launches its own throwaway headless Chrome, forces every toggle on (file:// has no `chrome.storage`, so toggles render off otherwise), and captures the popup body at 2x. Set `CHROME=/path/to/chrome` if it can't find the binary.
 
 ## Architecture: the two-world split
 
