@@ -24,7 +24,8 @@
     {
       "matches": [
         "https://glkvm.local/*",
-        "https://*.ts.net/*"
+        "https://*.ts.net/*",
+        "https://*.glkvm.com/*"
       ],
       "js": ["bridge.js"],
       "run_at": "document_start",
@@ -33,7 +34,8 @@
     {
       "matches": [
         "https://glkvm.local/*",
-        "https://*.ts.net/*"
+        "https://*.ts.net/*",
+        "https://*.glkvm.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_start",
