@@ -52,12 +52,13 @@ This is an unpacked extension (not on the Web Store).
 
 ## Configuration
 
-By default the script runs on `glkvm.local` and any Tailscale (`*.ts.net`) host. If you reach your KVM another way (LAN IP, custom hostname), add it to `content_scripts[0].matches` in `manifest.json`:
+By default the script runs on `glkvm.local`, any Tailscale (`*.ts.net`) host, and the GL.iNet remote-access domain (`*.glkvm.com`). If you reach your KVM another way (LAN IP, custom hostname), add it to `content_scripts[0].matches` in `manifest.json`:
 
 ```json
 "matches": [
   "https://glkvm.local/*",
   "https://*.ts.net/*",
+  "https://*.glkvm.com/*",
   "https://192.168.1.50/*"
 ]
 ```
