@@ -28,6 +28,7 @@ The GLKVM web UI is great, but it always uses your system's **default** speaker 
 | 🔈 | **Speaker / mic on by default** | Optionally enable the remote speaker and/or microphone automatically when the page loads. |
 | ⌨️ | **Capture keyboard shortcuts** | Uses the Keyboard Lock API in fullscreen to forward Cmd+R/W/T and other shortcuts to the remote instead of the local browser. |
 | 🖥️ | **Status bar in fullscreen** | Keeps the bottom bar (speaker, mic, stats) and toolbar visible in fullscreen by intercepting GLKVM's fullscreen button and suppressing its `fullscreenchange` handler. |
+| 🎨 | **Active-state icon** | The toolbar icon shows in color only on tabs where the extension is running, and stays monotone everywhere else. |
 | ⚙️ | **Options page** | Toggle each behavior on/off; preferences sync across your Chrome profile. |
 
 The device pickers appear as small chevrons next to the existing speaker/mic icons in the bottom status bar, plus a Picture-in-Picture button:

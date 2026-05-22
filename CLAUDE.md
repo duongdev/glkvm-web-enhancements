@@ -11,16 +11,17 @@ A Chromium MV3 browser extension that layers controls onto the **closed-source**
 Vanilla JS/HTML/CSS, no bundler, no dependencies, no tests. Iterate by editing files directly.
 
 - **Load/reload:** `chrome://extensions` → Developer mode → Load unpacked → select repo root. After edits, hit **Reload** on the extension card, then refresh the GLKVM tab.
-- **Syntax check before reload:** `node --check content.js && node --check bridge.js && node --check popup.js` and `python3 -c "import json;json.load(open('manifest.json'))"`.
-- **Regenerate icons** from the source SVG: `for s in 16 32 48 128; do rsvg-convert -w $s -h $s icons/icon.svg -o icons/icon-$s.png; done` (requires `rsvg-convert`, e.g. `brew install librsvg`).
+- **Syntax check before reload:** `node --check content.js && node --check bridge.js && node --check background.js && node --check popup.js` and `python3 -c "import json;json.load(open('manifest.json'))"`.
+- **Regenerate icons** from the source SVG: `for s in 16 32 48 128; do rsvg-convert -w $s -h $s icons/icon.svg -o icons/icon-$s.png; done` (requires `rsvg-convert`, e.g. `brew install librsvg`). The monotone icons (`icons/icon-mono-*.png`, the toolbar default for non-GLKVM tabs) are grayscale derivatives of the color PNGs: `for s in 16 32 48 128; do magick icons/icon-$s.png -colorspace Gray icons/icon-mono-$s.png; done`.
 - **Regenerate the popup screenshot** (`assets/popup.png`, used in the README) whenever `popup.html` changes: `python3 scripts/capture-popup.py`. It launches its own throwaway headless Chrome, forces every toggle on (file:// has no `chrome.storage`, so toggles render off otherwise), and captures the popup body at 2x. Set `CHROME=/path/to/chrome` if it can't find the binary.
 
 ## Architecture: the two-world split
 
-This is the central design constraint. The media hooks must run in the page's **MAIN world** at `document_start` (before the SPA opens WebRTC), but MAIN-world scripts have **no `chrome.*` access**. So there are two content scripts plus a popup:
+This is the central design constraint. The media hooks must run in the page's **MAIN world** at `document_start` (before the SPA opens WebRTC), but MAIN-world scripts have **no `chrome.*` access**. So there are two content scripts, a popup, and a service worker:
 
 - **`content.js` (MAIN world, `document_start`)** — all page logic: wraps `getUserMedia` and the `RTCPeerConnection` constructor, injects the bottom-bar controls, computes data totals, PiP, toolbar tweaks. Cannot read `chrome.storage`.
-- **`bridge.js` (isolated world, `document_start`)** — reads settings from `chrome.storage.sync` and mirrors them into a `data-glkvm-cfg` attribute on `<html>`. `content.js` reads that attribute via `cfg()`. This is the only channel between the two worlds.
+- **`bridge.js` (isolated world, `document_start`)** — reads settings from `chrome.storage.sync` and mirrors them into a `data-glkvm-cfg` attribute on `<html>`. `content.js` reads that attribute via `cfg()`. This is the only channel between the two worlds. Also pings `background.js` once on load so the toolbar icon lights up.
+- **`background.js` (service worker)** — toolbar-icon state only. Sets a per-tab **color** icon when `bridge.js` pings (the extension has effect there); a tab starting to load drops back to the **monotone** default. No tab-URL reading, so no `tabs` permission needed.
 - **`popup.html` / `popup.js`** — the `action.default_popup` settings UI; writes toggles to `chrome.storage.sync`. Clicking the toolbar icon opens it.
 
 Settings flow: **popup → `chrome.storage.sync` → `bridge.js` → `data-glkvm-cfg` attribute → `content.js`**.
@@ -34,6 +35,7 @@ Settings flow: **popup → `chrome.storage.sync` → `bridge.js` → `data-glkvm
 - **Settings defaults are duplicated** in `content.js` (`CFG_DEFAULTS`), `bridge.js` (`DEFAULTS`), and `popup.js` (`DEFAULTS`). Keep all three in sync when adding a toggle.
 - **`setupFullscreen()` intercepts GLKVM's own handlers in the capture phase.** For `showBarFullscreen`, two capture-phase listeners are registered: one swallows `fullscreenchange` before GLKVM's bubble-phase handler can unmount the chrome, and one intercepts fullscreen-button clicks and calls `requestFullscreen` / `exitFullscreen` directly. Adding any other fullscreen toggle logic must account for these listeners already being in place.
 - **Keyboard Lock API requires fullscreen + secure context.** `navigator.keyboard.lock()` is called on every `fullscreenchange` (both enter and exit paths) — it's a no-op until fullscreen is active. `Cmd+Q` and `Cmd+Tab` cannot be captured regardless of the lock list.
+- **The color toolbar icon depends on event ordering.** `background.js` resets a tab to the monotone icon on `tabs.onUpdated` `status: "loading"`, then `bridge.js` re-colors it via a message. This works because the `loading` event precedes `document_start` content scripts. The trade-off of this messaging design (vs. matching tab URLs) is that it needs no `tabs` permission — but a GLKVM tab already open when the extension reloads stays monotone until refreshed, since `bridge.js` only pings on page load.
 
 ## Coupling to the GLKVM SPA (fragile by nature)
 
