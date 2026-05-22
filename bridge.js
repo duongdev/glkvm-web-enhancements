@@ -19,6 +19,12 @@
   // documentElement may not exist yet at document_start in rare cases.
   if (!document.documentElement) document.addEventListener("DOMContentLoaded", sync, { once: true });
 
+  // Tell the service worker the extension has effect on this tab so it can
+  // switch the toolbar icon from monotone to color.
+  try {
+    chrome.runtime.sendMessage({ type: "glkvm-active" }).catch(() => {});
+  } catch (_) {}
+
   try {
     chrome.storage.onChanged.addListener((_changes, area) => { if (area === "sync") sync(); });
   } catch (_) {}
