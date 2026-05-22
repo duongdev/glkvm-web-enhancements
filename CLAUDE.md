@@ -61,4 +61,4 @@ The version lives in two places that must stay in sync: `manifest.json` `version
 
 ## Host matching
 
-`manifest.json` `matches` is deliberately generic (`glkvm.local`, `*.ts.net`) — **never commit personal hosts** (specific Tailscale IDs, LAN IPs). Users add their own host locally per the README.
+`manifest.json` `matches` is deliberately generic (`glkvm.local`, `*.ts.net`, `*.glkvm.com`) — **never commit personal hosts** (specific Tailscale IDs, LAN IPs). Users add their own host locally per the README.
